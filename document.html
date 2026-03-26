@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markdown Export</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown-dark.min.css">
+  <style>
+      body {
+          background-color: #0d1117;
+          color: #c9d1d9;
+      }
+      .markdown-body {
+          box-sizing: border-box;
+          min-width: 200px;
+          max-width: 980px;
+          margin: 0 auto;
+          padding: 45px;
+          background-color: #0d1117;
+          color: #c9d1d9;
+      }
+
+      /* Syntax Highlighting */
+      .hljs-doctag, .hljs-keyword, .hljs-template-tag, .hljs-template-variable, .hljs-type, .hljs-variable.language_ { color: #ff7b72; }
+      .hljs-title, .hljs-title.class_, .hljs-title.class_.inherited__, .hljs-title.function_ { color: #d2a8ff; }
+      .hljs-attr, .hljs-attribute, .hljs-literal, .hljs-meta, .hljs-number, .hljs-operator, .hljs-variable, .hljs-selector-attr, .hljs-selector-class, .hljs-selector-id { color: #79c0ff; }
+      .hljs-regexp, .hljs-string, .hljs-meta .hljs-string { color: #a5d6ff; }
+      .hljs-built_in, .hljs-symbol { color: #ffa657; }
+      .hljs-comment, .hljs-code, .hljs-formula { color: #8b949e; }
+      .hljs-name, .hljs-quote, .hljs-selector-tag, .hljs-selector-pseudo { color: #7ee787; }
+      .hljs-subst { color: #c9d1d9; }
+      .hljs-section { color: #1f6feb; font-weight: bold; }
+      .hljs-bullet { color: #79c0ff; }
+      .hljs-emphasis { font-style: italic; }
+      .hljs-strong { font-weight: bold; }
+      .hljs-addition { color: #aff5b4; background-color: #033a16; }
+      .hljs-deletion { color: #ffdcd7; background-color: #67060c; }
+
+      .markdown-alert {
+          padding: 0.5rem 1rem;
+          margin-bottom: 16px;
+          border-left: 0.25em solid;
+          border-radius: 0.375rem;
+      }
+      .markdown-alert > :last-child {
+          margin-bottom: 0;
+      }
+      .markdown-alert-title {
+          margin: 0 0 8px;
+          font-weight: 600;
+          line-height: 1.25;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+      }
+      .markdown-alert-icon {
+          display: inline-flex;
+          width: 16px;
+          height: 16px;
+      }
+      .markdown-alert-icon svg {
+          width: 16px;
+          height: 16px;
+          fill: currentColor;
+      }
+      .markdown-alert-note { color: #4493f8; border-left-color: #4493f8; background-color: rgba(31, 111, 235, 0.15); }
+      .markdown-alert-tip { color: #3fb950; border-left-color: #3fb950; background-color: rgba(35, 134, 54, 0.15); }
+      .markdown-alert-important { color: #ab7df8; border-left-color: #ab7df8; background-color: rgba(137, 87, 229, 0.15); }
+      .markdown-alert-warning { color: #d29922; border-left-color: #d29922; background-color: rgba(210, 153, 34, 0.18); }
+      .markdown-alert-caution { color: #f85149; border-left-color: #f85149; background-color: rgba(248, 81, 73, 0.18); }
+      .markdown-alert > *:not(.markdown-alert-title) { color: #c9d1d9; }
+
+      @media (max-width: 767px) {
+          .markdown-body {
+              padding: 15px;
+          }
+      }
+  </style>
+</head>
+<body>
+  <article class="markdown-body">
+      <h1>SDUI V3.0 — Complete Architecture &amp; Flow Diagram</h1>
+<blockquote>
+<p><strong>Version:</strong> 3.0<br><strong>Last Updated:</strong> March 2026<br><strong>Platform:</strong> Flutter (Client-Side Compiler + Renderer)</p>
+</blockquote>
+<hr>
+<h2>Table of Contents</h2>
+<ol>
+<li><a href="#1-high-level-architecture">High-Level Architecture</a></li>
+<li><a href="#2-app-startup-flow">App Startup Flow</a></li>
+<li><a href="#3-manifest-sync--caching">Manifest Sync &amp; Caching</a></li>
+<li><a href="#4-screen-load-flow">Screen Load Flow</a></li>
+<li><a href="#5-compilation-pipeline">Compilation Pipeline</a></li>
+<li><a href="#6-rendering-pipeline">Rendering Pipeline</a></li>
+<li><a href="#7-action-execution-flow">Action Execution Flow</a></li>
+<li><a href="#8-screen-lifecycle-events">Screen Lifecycle Events</a></li>
+<li><a href="#9-state-management--reactivity">State Management &amp; Reactivity</a></li>
+<li><a href="#10-caching-strategy">Caching Strategy</a></li>
+<li><a href="#11-component-reference-table">Component Reference Table</a></li>
+<li><a href="#12-data-flow-summary">Data Flow Summary</a></li>
+</ol>
+<hr>
+<h2>1. High-Level Architecture</h2>
+<pre><code class="hljs plaintext">┌──────────────────────────────────────────────────────────────────────┐
+│                          BACKEND SERVER                              │
+│                                                                      │
+│   /manifest.json          (version + hashes for all entries)         │
+│   /registry/tokens/:name  (design tokens: colors, spacing, etc.)    │
+│   /registry/styles/:name  (reusable style definitions)              │
+│   /registry/components/:name (reusable UI subtrees)                 │
+│   /screens/:id            (raw screen JSON definitions)             │
+│   /api/*                  (business APIs: auth, data, etc.)         │
+└──────────────────────────────────┬───────────────────────────────────┘
+                                   │
+                          HTTP (JSON)
+                                   │
+                                   ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                        FLUTTER CLIENT                                │
+│                                                                      │
+│  ┌────────────┐  ┌────────────┐  ┌───────────┐  ┌───────────────┐  │
+│  │  Manifest   │  │  Registry  │  │  Compiler │  │   Renderer    │  │
+│  │  Checker    │→ │  Loader    │→ │ (Client)  │→ │(LayoutEngine) │  │
+│  └────────────┘  └────────────┘  └───────────┘  └───────────────┘  │
+│        │                                               │            │
+│        ▼                                               ▼            │
+│  ┌────────────┐                                ┌───────────────┐   │
+│  │   Local     │                                │  Action       │   │
+│  │   Storage   │                                │  Executor     │   │
+│  │  (Cache)    │                                └───────────────┘   │
+│  └────────────┘                                        │            │
+│                                                        ▼            │
+│                                                ┌───────────────┐   │
+│                                                │  State         │   │
+│                                                │  Controller    │   │
+│                                                │  (GetX + Rx)   │   │
+│                                                └───────────────┘   │
+└──────────────────────────────────────────────────────────────────────┘</code></pre><hr>
+<h2>2. App Startup Flow</h2>
+<p>This is the sequence that runs in <code>main.dart</code> before the app UI is shown.</p>
+<pre><code class="hljs plaintext">┌─────────────────────────────────────────────────────────────────┐
+│                         main.dart                               │
+│                       (App Startup)                             │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │  WidgetsFlutterBinding       │
+              │  .ensureInitialized()        │
+              └──────────────┬───────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │  LocalStorage.instance.init()│
+              │  (SharedPreferences)         │
+              └──────────────┬───────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    ManifestChecker.check()                       │
+│                                                                 │
+│  1. Load LOCAL manifest from SharedPreferences                  │
+│  2. GET /manifest.json from backend server                      │
+│  3. Compare local vs server hashes per category:                │
+│     ┌──────────────┬──────────────┬──────────────┬────────────┐ │
+│     │    tokens     │    styles    │  components  │  screens   │ │
+│     │  (hash diff)  │ (hash diff) │ (hash diff)  │(hash diff) │ │
+│     └──────┬───────┴──────┬──────┴──────┬───────┴─────┬──────┘ │
+│            │              │             │             │         │
+│  4. Download ONLY changed entries from server                   │
+│  5. Cache each downloaded entry in LocalStorage                 │
+│  6. Save the updated manifest locally                           │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │  ScreenConfig.update()       │
+              │  • Map screen IDs to URLs    │
+              │  • Store registry version    │
+              └──────────────┬───────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │  ArtifactLoader              │
+              │  .preloadRegistry()          │
+              │                              │
+              │  RegistryLoader reads from   │
+              │  local cache into memory:    │
+              │  • Token groups              │
+              │  • Style files               │
+              │  • Component definitions     │
+              └──────────────┬───────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │       runApp(App())          │
+              │  (App is ready to render)    │
+              └──────────────────────────────┘</code></pre><h3>Key Points</h3>
+<ul>
+<li>The manifest check happens <strong>once</strong> at app startup.</li>
+<li>Only <strong>changed</strong> files are downloaded (hash-based diffing), not everything.</li>
+<li>Registry data (tokens, styles, components) is preloaded into <strong>memory</strong> so compilation is instant.</li>
+<li>If the server is unreachable, the app gracefully falls back to the local cache.</li>
+</ul>
+<hr>
+<h2>3. Manifest Sync &amp; Caching</h2>
+<h3>Manifest JSON Structure (from backend)</h3>
+<pre><code class="hljs json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">"version"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"1.0.0"</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">"tokens"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"colors"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">"path"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"http://host:5050/registry/tokens/colors"</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">"hash"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"sha256:abc..."</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"spacing"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">"path"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"http://host:5050/registry/tokens/spacing"</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">"hash"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"sha256:def..."</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">"styles"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"buttons"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">"path"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"http://host:5050/registry/styles/buttons"</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">"hash"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"sha256:ghi..."</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">"components"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"header"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">"path"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"http://host:5050/registry/components/header"</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">"hash"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"sha256:jkl..."</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">"screens"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"login"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">"path"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"http://host:5050/screens/login"</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">"hash"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"sha256:mno..."</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"dashboard"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">"path"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"http://host:5050/screens/dashboard"</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">"hash"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"sha256:pqr..."</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre><h3>Diff Algorithm</h3>
+<pre><code class="hljs plaintext">For each category (tokens, styles, components, screens):
+  For each entry in server manifest:
+    IF entry does not exist locally OR local hash ≠ server hash:
+      → Download the file from entry.path
+      → Save to LocalStorage
+      → Mark as "updated"</code></pre><h3>Version Bumping</h3>
+<ul>
+<li>The <code>version</code> field changes when <strong>registry</strong> files (tokens, styles, components) change.</li>
+<li>When <code>version</code> changes, all cached <strong>artifacts</strong> become stale and are recompiled on next access.</li>
+<li>Screen-only changes don't bump the version — only the screen's own hash changes.</li>
+</ul>
+<hr>
+<h2>4. Screen Load Flow</h2>
+<p>When a user navigates to any screen (e.g., <code>/login</code>, <code>/dashboard</code>), this flow runs.</p>
+<pre><code class="hljs plaintext">┌─────────────────────────────────────────────────────────────────┐
+│  GetX Route: e.g. /login  →  SduiPage(screenId: "login")      │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │     ArtifactLoader           │
+              │     .loadScreen("login")     │
+              └──────────────┬───────────────┘
+                             │
+                  ┌──────────┴──────────┐
+                  ▼                     │
+     ┌────────────────────────┐        │
+     │ Step 1: Check artifact │        │
+     │ cache in LocalStorage  │        │
+     └──────────┬─────────────┘        │
+                │                      │
+         ┌──────┴──────┐               │
+         │             │               │
+    CACHE HIT       CACHE MISS         │
+    + version       or STALE           │
+    matches         version            │
+         │             │               │
+         ▼             ▼               │
+  ┌────────────┐  ┌────────────────────┴──────────────────────┐
+  │  Return     │  │ Step 2: Load raw screen JSON              │
+  │  cached     │  │                                           │
+  │  artifact   │  │  Priority order:                          │
+  │             │  │  ① Local cache (raw JSON, not artifact)   │
+  │  (0ms!)     │  │  ② Bundled assets (assets/json/*.json)   │
+  │             │  │  ③ Remote HTTP GET from backend           │
+  └────────────┘  └────────────────────┬──────────────────────┘
+                                       │
+                                       ▼
+                  ┌──────────────────────────────────────────┐
+                  │ Step 3: Compile via SduiCompiler          │
+                  │ (raw JSON + registry → artifact)         │
+                  └────────────────────┬─────────────────────┘
+                                       │
+                                       ▼
+                  ┌──────────────────────────────────────────┐
+                  │ Step 4: Cache compiled artifact locally   │
+                  │ (instant load next time)                  │
+                  └────────────────────┬─────────────────────┘
+                                       │
+                                       ▼
+                  ┌──────────────────────────────────────────┐
+                  │ Return ArtifactLoadResult                 │
+                  │ → mode: artifact | rawJson | none        │
+                  └──────────────────────────────────────────┘</code></pre><h3>Load Priority (Raw Screen JSON)</h3>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Source</th>
+<th>When Used</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1st</td>
+<td>Local cache</td>
+<td>Screen was previously downloaded from backend</td>
+</tr>
+<tr>
+<td>2nd</td>
+<td>Bundled assets</td>
+<td>Screen JSON is shipped inside the APK/IPA</td>
+</tr>
+<tr>
+<td>3rd</td>
+<td>Remote HTTP</td>
+<td>Fallback fetch from backend server</td>
+</tr>
+</tbody></table>
+<h3>Render Modes</h3>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>artifact</code></td>
+<td>Compiled artifact with <code>computedStyle</code> per node (primary V3 path)</td>
+</tr>
+<tr>
+<td><code>rawJson</code></td>
+<td>Uncompiled JSON, uses V2 runtime resolvers as fallback</td>
+</tr>
+<tr>
+<td><code>none</code></td>
+<td>No data found — shows error screen</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>5. Compilation Pipeline</h2>
+<p>The compiler runs <strong>client-side</strong> and transforms raw screen JSON + registry data into a compiled artifact.</p>
+<pre><code class="hljs plaintext">┌─────────────────────────────────────────────────────────────────┐
+│                       SduiCompiler.compile()                    │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+         ┌───────────────────┼───────────────────┐
+         ▼                   ▼                   ▼
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+│  TokenCompiler   │ │  StyleCompiler   │ │ ComponentCompiler│
+│  .load()         │ │  .load()         │ │  .load()         │
+│                  │ │                  │ │                  │
+│  Flattens token  │ │  Indexes style   │ │  Indexes comp    │
+│  groups into     │ │  definitions by  │ │  definitions by  │
+│  dot-path map    │ │  .file.key       │ │  name            │
+└──────────────────┘ └──────────────────┘ └──────────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │   Parse raw JSON → SduiRoot  │
+              │   (layout tree, apis,        │
+              │    actions, inline V2 data)  │
+              └──────────────┬───────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│          _compileNode(node, parentStyle) — RECURSIVE            │
+│                                                                 │
+│   For EACH node in the tree:                                    │
+│                                                                 │
+│   ① Is type == "component"?                                     │
+│      YES → ComponentCompiler.expand(node)                       │
+│            Inline the component's subtree definition             │
+│            → Re-enter _compileNode with expanded node           │
+│                                                                 │
+│   ② StyleCompiler.compute():                                    │
+│      ┌─────────────────────────────────────────────────────┐    │
+│      │  Layer 1: Parent's computed style (inheritance)     │    │
+│      │  Layer 2: Style class refs  (.file.key → resolved)  │    │
+│      │  Layer 3: Inline style overrides (inlineStyle map)  │    │
+│      │                                                     │    │
+│      │  Merge order: Layer 1 ← Layer 2 ← Layer 3          │    │
+│      │  (Later layers override earlier ones)               │    │
+│      │                                                     │    │
+│      │  Then: TokenCompiler resolves all #group.key refs   │    │
+│      │  e.g. #colors.primary → "#0A84FF"                   │    │
+│      │                                                     │    │
+│      │  Output: flat computedStyle map                     │    │
+│      └─────────────────────────────────────────────────────┘    │
+│                                                                 │
+│   ③ Recursively compile children[]                              │
+│     (pass current computedStyle as parentStyle)                 │
+│                                                                 │
+│   ④ Return node.copyWith(                                       │
+│        computedStyle: mergedFlatMap,                            │
+│        clearStyle: true,     ← remove class refs               │
+│        clearInlineStyle: true ← remove inline overrides        │
+│      )                                                          │
+└─────────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      SduiArtifact (Output)                      │
+│                                                                 │
+│  {                                                              │
+│    "artifactVersion": "3.0",                                    │
+│    "screen": "login",                                           │
+│    "artifactKey": "login_1.0.0",                                │
+│    "registryVersion": "1.0.0",                                  │
+│    "renderTree": {                                              │
+│      "type": "screen",                                          │
+│      "computedStyle": {                                         │
+│        "padding": { "left": 24, "right": 24 },                 │
+│        "backgroundColor": "#FFFFFF"                             │
+│      },                                                         │
+│      "children": [ ... nodes with flat computedStyle ... ]      │
+│    },                                                           │
+│    "apis": { ... },                                             │
+│    "actions": { ... }                                           │
+│  }                                                              │
+└─────────────────────────────────────────────────────────────────┘</code></pre><h3>Token Resolution Examples</h3>
+<table>
+<thead>
+<tr>
+<th>Input (in style)</th>
+<th>Resolved Output</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>#colors.primary</code></td>
+<td><code>"#0A84FF"</code></td>
+</tr>
+<tr>
+<td><code>#spacing.md</code></td>
+<td><code>16</code></td>
+</tr>
+<tr>
+<td><code>#FFFFFF</code></td>
+<td><code>"#FFFFFF"</code> (literal hex — not a token, passed through)</td>
+</tr>
+<tr>
+<td><code>{{form.mobile}}</code></td>
+<td><code>"{{form.mobile}}"</code> (runtime binding — not resolved at compile time)</td>
+</tr>
+</tbody></table>
+<h3>Style Merge Example</h3>
+<pre><code class="hljs plaintext">Parent computed:    { "color": "#212121", "fontSize": 14 }
+Class .heading:     { "fontSize": 26, "fontWeight": "bold" }
+Inline override:    { "color": "#FF0000" }
+
+Result computedStyle:
+{
+  "color": "#FF0000",         ← inline wins over parent
+  "fontSize": 26,             ← class wins over parent
+  "fontWeight": "bold"        ← from class
+}</code></pre><hr>
+<h2>6. Rendering Pipeline</h2>
+<p>The renderer takes a compiled artifact and builds Flutter widgets.</p>
+<pre><code class="hljs plaintext">┌─────────────────────────────────────────────────────────────────┐
+│          SduiScreenWidget (StatefulWidget)                       │
+│                                                                 │
+│  initState():                                                   │
+│  ┌───────────────────────────────────────────────────────┐      │
+│  │  V3 Artifact Mode              V2 Raw JSON Fallback   │      │
+│  │  ─────────────────             ──────────────────────  │      │
+│  │  • No TokenResolver needed     • TokenResolver.load()  │      │
+│  │  • No StyleResolver needed     • StyleResolver.load()  │      │
+│  │  • Uses ComputedStyleParser    • Uses StyleResolver    │      │
+│  │  • renderTree from artifact    • parseLayout(root)     │      │
+│  └──────────────────────┬────────────────────────────────┘      │
+│                         │                                       │
+│  build():               ▼                                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  GetBuilder&lt;SduiStateController&gt;                         │   │
+│  │  (rebuilds when global state changes)                    │   │
+│  │        │                                                 │   │
+│  │        ▼                                                 │   │
+│  │  engine.buildFromArtifact(renderTree)   ← V3             │   │
+│  │  OR engine.build()                      ← V2 fallback    │   │
+│  └──────────────────────┬───────────────────────────────────┘   │
+└─────────────────────────┼───────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    LayoutEngine._buildNode()                     │
+│                                                                 │
+│  For each SduiNode in the tree:                                 │
+│                                                                 │
+│  ① resolveStyle(node)                                           │
+│     V3: node.computedStyle → ComputedStyleParser                │
+│         → SduiResolvedStyle (Flutter-ready types)               │
+│     V2: styleResolver.resolve(node.style) → SduiResolvedStyle   │
+│                                                                 │
+│  ② Match node.type → instantiate Flutter widget                 │
+│     ┌────────────────────────────────────────────────────────┐  │
+│     │  LAYOUT        │  DISPLAY      │  INPUT               │  │
+│     │  ─────────     │  ──────────   │  ──────────          │  │
+│     │  screen        │  text         │  input               │  │
+│     │  column        │  image        │  checkbox             │  │
+│     │  row           │  icon         │  radio                │  │
+│     │  container     │  paragraph    │  dropdown             │  │
+│     │  stack         │  divider      │  dateSelector         │  │
+│     │  scroll        │  spacer       │                       │  │
+│     │  expanded      │  link         │  INTERACTIVE          │  │
+│     │  wrap          │  progressBar  │  ──────────           │  │
+│     │  card          │  spinner      │  button               │  │
+│     │  list          │               │  bottomSheetTrigger   │  │
+│     │  grid          │               │  popupTrigger         │  │
+│     │  accordion     │               │                       │  │
+│     └────────────────┴───────────────┴───────────────────────┘  │
+│                                                                 │
+│  ③ ExpressionResolver handles runtime bindings:                 │
+│     {{form.mobile}}                → current form field value   │
+│     {{state.token}}                → current state value        │
+│     {{form.terms &amp;&amp; form.mobile.length &gt;= 10}} → boolean eval   │
+│                                                                 │
+│  ④ Recursively build children[]                                 │
+│                                                                 │
+│  ⑤ Per-key Obx watchers wrap leaf nodes for fine-grained        │
+│     reactivity (only rebuild what changed)                      │
+└─────────────────────────────────────────────────────────────────┘</code></pre><h3>Style Resolution (V3 vs V2)</h3>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>V3 Artifact Mode</th>
+<th>V2 Raw JSON Fallback</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Token resolution</td>
+<td>Done at <strong>compile time</strong></td>
+<td>Done at <strong>runtime</strong> by TokenResolver</td>
+</tr>
+<tr>
+<td>Style class merging</td>
+<td>Done at <strong>compile time</strong></td>
+<td>Done at <strong>runtime</strong> by StyleResolver</td>
+</tr>
+<tr>
+<td>Read style for widget</td>
+<td><code>node.computedStyle</code> → ComputedStyleParser</td>
+<td><code>node.style</code> → StyleResolver.resolve()</td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>Fast (flat map lookup)</td>
+<td>Slower (resolution + merge per frame)</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>7. Action Execution Flow</h2>
+<p>Actions are triggered by user interactions (tap, submit) or lifecycle events.</p>
+<pre><code class="hljs plaintext">┌─────────────────────────────────────────────────────────────────┐
+│                     User Interaction                             │
+│         (tap button, submit form, screen loads, etc.)           │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │  ActionExecutor.run(action)   │
+              └──────────────┬───────────────┘
+                             │
+                    ┌────────┴────────────────────────────────┐
+                    │     Check condition (if present)         │
+                    │     ExpressionResolver.resolveBool()     │
+                    │     false → SKIP action entirely         │
+                    └────────┬────────────────────────────────┘
+                             │ true (or no condition)
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Switch on action.type                          │
+│                                                                 │
+│  NAVIGATION                                                     │
+│  ─────────────                                                  │
+│  "navigate"   → GetX push to named route                       │
+│  "pop"        → GetX pop (go back)                              │
+│                                                                 │
+│  DATA / API                                                     │
+│  ─────────────                                                  │
+│  "api"        → HTTP call via ApiClient                         │
+│                 → Resolve {{form.*}} in body                    │
+│                 → onSuccess / onFail → run sub-actions          │
+│  "setState"   → Update SduiStateController state key            │
+│  "setForm"    → Update SduiStateController form field           │
+│  "storeToken" → Save value to secure storage                    │
+│                                                                 │
+│  UI FEEDBACK                                                    │
+│  ─────────────                                                  │
+│  "toast"      → Show SnackBar message                           │
+│  "popup"      → Show dialog / bottom sheet                      │
+│  "launchUrl"  → Open URL in external browser                    │
+│                                                                 │
+│  FLOW CONTROL                                                   │
+│  ─────────────                                                  │
+│  "chain"      → Run actions[] array sequentially                │
+│  "delay"      → Wait N milliseconds, then continue             │
+│  "condition"  → If/else branching (run different actions)       │
+│                                                                 │
+│  EXTENSIBILITY                                                  │
+│  ─────────────                                                  │
+│  "custom"     → Call registered handler from CustomActionRegistry│
+│  "event"      → Fire named event (inter-component messaging)   │
+│  "analytics"  → Fire analytics event to handler                 │
+└─────────────────────────────────────────────────────────────────┘</code></pre><h3>Action Chaining Example (Login Flow)</h3>
+<pre><code class="hljs json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">"event"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"onClick"</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">"type"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"api"</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">"target"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"sendOtp"</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">"onSuccess"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"type"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"chain"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"actions"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+      <span class="hljs-punctuation">{</span> <span class="hljs-attr">"type"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"setState"</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">"props"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">"key"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"state.mobile"</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">"value"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"{{form.mobile}}"</span> <span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-punctuation">{</span> <span class="hljs-attr">"type"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"toast"</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">"props"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">"message"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"OTP sent!"</span> <span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-punctuation">{</span> <span class="hljs-attr">"type"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"navigate"</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">"target"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"/otp"</span> <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">"onFail"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"type"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"toast"</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">"props"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">"message"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Login failed. Try again."</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre><p><strong>Execution:</strong></p>
+<ol>
+<li>API call <code>sendOtp</code> → POST <code>/api/auth/send-otp</code> with <code>{ "mobile": "9876543210" }</code></li>
+<li>On success → <strong>chain</strong> runs sequentially:<ul>
+<li>Save mobile to state</li>
+<li>Show toast "OTP sent!"</li>
+<li>Navigate to <code>/otp</code> screen</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2>8. Screen Lifecycle Events</h2>
+<pre><code class="hljs plaintext">    ┌──────────────────────────────────────────────────┐
+    │              Screen Opens                         │
+    │                                                  │
+    │    ┌──────────┐                                  │
+    │    │  onInit  │  First frame callback             │
+    │    └────┬─────┘                                  │
+    │         │                                        │
+    │         ▼                                        │
+    │    ┌───────────────┐                             │
+    │    │ afterViewInit  │  After widget tree is built │
+    │    └───────┬───────┘                             │
+    │            │                                     │
+    │            ▼                                     │
+    │    ┌──────────────────────────────┐              │
+    │    │  Screen is LIVE &amp; INTERACTIVE│              │
+    │    │  (user can interact)         │              │
+    │    └──────────────┬───────────────┘              │
+    │                   │                              │
+    │              User navigates away                 │
+    │                   │                              │
+    │                   ▼                              │
+    │    ┌───────────┐                                 │
+    │    │ onDispose  │  Cleanup, cancel subscriptions  │
+    │    └───────────┘                                 │
+    └──────────────────────────────────────────────────┘</code></pre><h3>Common Use Cases</h3>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>onInit</code></td>
+<td>Pre-fetch data, set initial state, start timers</td>
+</tr>
+<tr>
+<td><code>afterViewInit</code></td>
+<td>Auto-focus a field, trigger animations, scroll to position</td>
+</tr>
+<tr>
+<td><code>onDispose</code></td>
+<td>Clear form data, cancel pending API calls, reset state</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>9. State Management &amp; Reactivity</h2>
+<h3>State Architecture</h3>
+<pre><code class="hljs plaintext">┌─────────────────────────────────────────────────────────────────┐
+│                  SduiStateController (GetX)                      │
+│                                                                 │
+│  ┌──────────────────────────┐  ┌──────────────────────────────┐│
+│  │      Form State           │  │       App State              ││
+│  │  (per-screen, stacked)    │  │  (global, persistent)        ││
+│  │                           │  │                              ││
+│  │  form.mobile = "98765..." │  │  state.token = "mock.abc..." ││
+│  │  form.terms  = true       │  │  state.mobile = "9876543210" ││
+│  │  form.otp    = "123456"   │  │  state.userName = "FH User"  ││
+│  └──────────────────────────┘  └──────────────────────────────┘│
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │              Per-Key Rx Watchers                          │  │
+│  │                                                          │  │
+│  │  _formWatchers["mobile"] = RxInt(3)   ← increments on   │  │
+│  │  _formWatchers["terms"]  = RxInt(1)     each change      │  │
+│  │  _stateWatchers["token"] = RxInt(2)                      │  │
+│  │                                                          │  │
+│  │  Widgets wrapped in Obx only rebuild when their          │  │
+│  │  specific key's watcher increments.                      │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘</code></pre><h3>Reactivity Flow</h3>
+<pre><code class="hljs plaintext">  User types in input field
+           │
+           ▼
+  setFormField("mobile", "98765")
+           │
+           ├──► Updates form state map
+           │
+           └──► _formWatchers["mobile"].value++
+                        │
+                        ▼
+              Only widgets observing "mobile"
+              via Obx rebuild (NOT the whole screen)</code></pre><h3>Expression Resolution (Runtime)</h3>
+<table>
+<thead>
+<tr>
+<th>Expression</th>
+<th>Resolves To</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>{{form.mobile}}</code></td>
+<td><code>"9876543210"</code></td>
+<td>Current form field value</td>
+</tr>
+<tr>
+<td><code>{{state.token}}</code></td>
+<td><code>"mock.abc..."</code></td>
+<td>Stored app state value</td>
+</tr>
+<tr>
+<td><code>{{form.terms &amp;&amp; form.mobile.length &gt;= 10}}</code></td>
+<td><code>true</code></td>
+<td>Boolean expression for conditional enabling</td>
+</tr>
+<tr>
+<td><code>{{api.sendOtpResponse.data.mobile}}</code></td>
+<td><code>"9876543210"</code></td>
+<td>Value from API response</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>10. Caching Strategy</h2>
+<h3>Cache Layers</h3>
+<pre><code class="hljs plaintext">┌─────────────┐       ┌───────────────────┐       ┌──────────────┐
+│   Backend    │──────►│  ManifestChecker  │──────►│ LocalStorage │
+│   Server     │  GET  │  (hash-based diff)│ save  │              │
+│              │       └───────────────────┘       │ Cached:      │
+│ /manifest    │                                    │ • manifest   │
+│ /registry/*  │                                    │ • tokens/*   │
+│ /screens/*   │                                    │ • styles/*   │
+└─────────────┘                                    │ • comps/*    │
+                                                   │ • artifacts/*│
+                                                   └──────┬───────┘
+                                                          │
+                                   ┌──────────────────────┴──────┐
+                                   │                             │
+                              Cache HIT                     Cache MISS
+                              + version matches             or STALE
+                                   │                             │
+                                   ▼                             ▼
+                            Return instantly            Compile raw JSON
+                            (0ms latency)               → Cache artifact
+                                                        → Return</code></pre><h3>What Gets Cached</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Storage Key</th>
+<th>Invalidated When</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Manifest</td>
+<td><code>sdui_manifest</code></td>
+<td>Every successful server fetch</td>
+</tr>
+<tr>
+<td>Token files</td>
+<td><code>registry_tokens_{id}</code></td>
+<td>Hash changes in manifest</td>
+</tr>
+<tr>
+<td>Style files</td>
+<td><code>registry_styles_{id}</code></td>
+<td>Hash changes in manifest</td>
+</tr>
+<tr>
+<td>Component files</td>
+<td><code>registry_components_{id}</code></td>
+<td>Hash changes in manifest</td>
+</tr>
+<tr>
+<td>Raw screen JSON</td>
+<td><code>artifact_{screenId}</code></td>
+<td>Hash changes in manifest</td>
+</tr>
+<tr>
+<td>Compiled artifacts</td>
+<td><code>artifact_{screenId}</code></td>
+<td>Registry version changes</td>
+</tr>
+</tbody></table>
+<h3>Cache Invalidation Rules</h3>
+<ol>
+<li><strong>Registry changes</strong> (tokens/styles/components) → <code>manifest.version</code> bumps → all cached artifacts become stale → recompiled on next access</li>
+<li><strong>Screen-only changes</strong> → only that screen's hash changes → only that screen is re-downloaded and recompiled</li>
+<li><strong>No changes</strong> → everything served from cache → zero network calls after startup</li>
+</ol>
+<hr>
+<h2>11. Component Reference Table</h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Component</th>
+<th>File</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Config</strong></td>
+<td><code>ScreenConfig</code></td>
+<td><code>config/screen_config.dart</code></td>
+<td>Backend URLs, registry version, screen URL map</td>
+</tr>
+<tr>
+<td><strong>Sync</strong></td>
+<td><code>ManifestChecker</code></td>
+<td><code>storage/manifest_checker.dart</code></td>
+<td>Diff local vs server manifest, download changes</td>
+</tr>
+<tr>
+<td><strong>Sync</strong></td>
+<td><code>SduiManifest</code></td>
+<td><code>models/manifest.dart</code></td>
+<td>Manifest data model (version, entries by category)</td>
+</tr>
+<tr>
+<td><strong>Storage</strong></td>
+<td><code>LocalStorage</code></td>
+<td><code>storage/local_storage.dart</code></td>
+<td>Persist manifest, registry files, artifacts</td>
+</tr>
+<tr>
+<td><strong>Loading</strong></td>
+<td><code>RegistryLoader</code></td>
+<td><code>loader/registry_loader.dart</code></td>
+<td>Load tokens/styles/components from cache or assets</td>
+</tr>
+<tr>
+<td><strong>Loading</strong></td>
+<td><code>ArtifactLoader</code></td>
+<td><code>loader/artifact_loader.dart</code></td>
+<td>Load screen → check cache → compile if needed</td>
+</tr>
+<tr>
+<td><strong>Compiler</strong></td>
+<td><code>SduiCompiler</code></td>
+<td><code>compiler/sdui_compiler.dart</code></td>
+<td>Orchestrate full compilation pipeline</td>
+</tr>
+<tr>
+<td><strong>Compiler</strong></td>
+<td><code>TokenCompiler</code></td>
+<td><code>compiler/token_compiler.dart</code></td>
+<td>Resolve <code>#group.key</code> token references</td>
+</tr>
+<tr>
+<td><strong>Compiler</strong></td>
+<td><code>StyleCompiler</code></td>
+<td><code>compiler/style_compiler.dart</code></td>
+<td>Merge class + inline + parent styles</td>
+</tr>
+<tr>
+<td><strong>Compiler</strong></td>
+<td><code>ComponentCompiler</code></td>
+<td><code>compiler/component_compiler.dart</code></td>
+<td>Expand reusable component subtrees</td>
+</tr>
+<tr>
+<td><strong>Runtime</strong></td>
+<td><code>ExpressionResolver</code></td>
+<td><code>resolver/expression_resolver.dart</code></td>
+<td>Resolve <code>{{form.x}}</code> and boolean expressions</td>
+</tr>
+<tr>
+<td><strong>Runtime</strong></td>
+<td><code>ComputedStyleParser</code></td>
+<td><code>resolver/computed_style_parser.dart</code></td>
+<td>Parse flat computedStyle → Flutter types</td>
+</tr>
+<tr>
+<td><strong>Rendering</strong></td>
+<td><code>LayoutEngine</code></td>
+<td><code>engine/layout_engine.dart</code></td>
+<td>Build Flutter widget tree from nodes</td>
+</tr>
+<tr>
+<td><strong>Rendering</strong></td>
+<td><code>SduiScreenWidget</code></td>
+<td><code>sdui_screen.dart</code></td>
+<td>Host widget for an SDUI screen</td>
+</tr>
+<tr>
+<td><strong>Rendering</strong></td>
+<td><code>SduiPage</code></td>
+<td><code>sdui_page.dart</code></td>
+<td>Entry point widget with loading state</td>
+</tr>
+<tr>
+<td><strong>Actions</strong></td>
+<td><code>ActionExecutor</code></td>
+<td><code>actions/action_executor.dart</code></td>
+<td>Execute all action types (api, navigate, etc.)</td>
+</tr>
+<tr>
+<td><strong>Actions</strong></td>
+<td><code>CustomActionRegistry</code></td>
+<td><code>actions/custom_action_registry.dart</code></td>
+<td>Register pluggable custom action handlers</td>
+</tr>
+<tr>
+<td><strong>State</strong></td>
+<td><code>SduiStateController</code></td>
+<td><code>state/sdui_state_controller.dart</code></td>
+<td>GetX state with per-key Rx reactivity</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>12. Data Flow Summary</h2>
+<h3>End-to-End: From JSON to Pixels</h3>
+<pre><code class="hljs plaintext">  BACKEND                    CLIENT
+  ───────                    ──────
+
+  manifest.json ──────────►  ManifestChecker
+                                   │
+  registry/tokens/* ──────►  RegistryLoader ──► Memory cache
+  registry/styles/* ──────►       │
+  registry/components/* ──►       │
+                                   │
+  screens/*.json ─────────►  ArtifactLoader
+                                   │
+                             SduiCompiler
+                             ┌─────┴─────┐
+                             │ Tokens     │  (#colors.primary → "#0A84FF")
+                             │ Styles     │  (.heading → { fontSize: 26 })
+                             │ Components │  (component → expanded subtree)
+                             └─────┬─────┘
+                                   │
+                             Artifact (cached)
+                             { renderTree with flat computedStyle }
+                                   │
+                             LayoutEngine
+                             ┌─────┴─────┐
+                             │ Parse node │
+                             │ Resolve    │  (computedStyle → Flutter types)
+                             │ Build      │  (node.type → Flutter widget)
+                             │ Bind       │  ({{form.x}} → live value)
+                             └─────┬─────┘
+                                   │
+                             Flutter Widget Tree
+                                   │
+                                   ▼
+                             ┌───────────┐
+                             │  PIXELS   │
+                             │  ON       │
+                             │  SCREEN   │
+                             └───────────┘</code></pre><hr>
+<h2>Quick Reference: Key Syntax</h2>
+<table>
+<thead>
+<tr>
+<th>Syntax</th>
+<th>Where Resolved</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>#group.key</code></td>
+<td>Compile time (TokenCompiler)</td>
+<td><code>#colors.primary</code> → <code>"#0A84FF"</code></td>
+</tr>
+<tr>
+<td><code>.file.key</code></td>
+<td>Compile time (StyleCompiler)</td>
+<td><code>.buttons.primary</code> → <code>{ bg, color, radius }</code></td>
+</tr>
+<tr>
+<td><code>#RRGGBB</code> / <code>#RRGGBBAA</code></td>
+<td>Pass-through (literal hex color)</td>
+<td><code>#374151</code> stays <code>#374151</code></td>
+</tr>
+<tr>
+<td><code>{{path.to.value}}</code></td>
+<td>Runtime (ExpressionResolver)</td>
+<td><code>{{form.mobile}}</code> → <code>"9876543210"</code></td>
+</tr>
+<tr>
+<td><code>{{expr1 &amp;&amp; expr2}}</code></td>
+<td>Runtime (ExpressionResolver)</td>
+<td><code>{{form.terms &amp;&amp; form.mobile.length &gt;= 10}}</code> → <code>true</code></td>
+</tr>
+</tbody></table>
+
+  </article>
+</body>
+</html>
